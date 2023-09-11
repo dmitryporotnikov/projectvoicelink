@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a C# Telegram bot designed to receive and store voice messages from users, then randomly send back another user's voice message.
+This is a C# Telegram bot designed to receive and store voice messages from users, then randomly send back another user's voice message. The goal is to simulate "Message in a Bottle", using telegram as a delivery medium.
 
 ## Dependencies
 
@@ -21,7 +21,7 @@ The bot listens for incoming voice messages, validates their length, and saves t
 
 ### File Hashing
 
-For each received voice message, the bot calculates a hash value to identify unique messages.
+For each received voice message, the bot calculates a hash value to identify unique messages. Bot will prevent sending the same message over and over again (by checking MD5) to avoid spam.
 
 ### Commands
 
