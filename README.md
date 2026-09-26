@@ -1,73 +1,86 @@
-# Telegram Bot for Voice Message Exchange
+# ProjectVoiceLink - Telegram Voice Message Exchange
 
-## Overview
+[![.NET 10.0](https://img.shields.io/badge/.NET-10.0%20LTS-purple.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](Dockerfile)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-This is a C# Telegram bot designed to receive and store voice messages from users, then randomly send back another user's voice message. The goal is to simulate "Message in a Bottle", using telegram as a delivery medium.
+An asynchronous, high-concurrency Telegram Bot built with C# and **.NET 10 LTS** designed to exchange voice messages randomly between users ("Message in a Bottle" concept).
 
-## Dependencies
+---
 
-- `Telegram.Bot`
-- `Microsoft.Data.Sqlite`
+## Quick Navigation
+
+- [Documentation Index](Documentation/README.md)
+- [Architecture & Database Design](Documentation/architecture.md)
+- [Configuration & Environment Variables](Documentation/configuration.md)
+- [Handlers, Localization & Features](Documentation/handlers_and_features.md)
+- [Deployment & Server Administration](Documentation/deployment.md)
+- [Development & Testing Guide](Documentation/development.md)
+- [AI Coding Agent Guidelines](AGENTS.md)
+
+---
 
 ## Key Features
 
-### Logging User Messages and Metadata
+- **Anonymous Voice Exchange**: Users drop a voice note into the bot and receive a random voice note from another user in return.
+- **High Concurrency & Performance**: SQLite Write-Ahead Logging (WAL mode), connection pooling, hardware-accelerated MD5 hashing (`MD5.HashDataAsync`), and $O(1)$ indexed lookups.
+- **Server File System Visibility**: Audio files and SQLite database are directly stored on the host file system (`./data/`) with human-readable timestamps and user IDs.
+- **Automated Disk Maintenance**: Scheduled background cleaner (`PeriodicTimer`) and admin commands (`/purge`, `/stats`) that automatically delete expired voice files, purge database records, clean orphan files, and compact SQLite.
+- **Multi-Layered Spam & Abuse Protection**:
+  - Sliding-window rate limiting on voice submissions (`VOICE_COOLDOWN_SECONDS`) and commands (`COMMAND_COOLDOWN_SECONDS`).
+  - Global duplicate detection by MD5 hash (duplicate files are immediately deleted).
+  - Configurable recording duration boundaries (`MIN_VOICE_LENGTH_SECONDS` and `MAX_VOICE_LENGTH_SECONDS`).
+  - User banlist support (`BANNED_USER_IDS`).
+- **Multi-Language Localization**:
+  - Automatic detection via Telegram client `LanguageCode` (`ru`, `en`, `es`, `de`, `uk`, `pt`, `pl`).
+  - Explicit language switching via `/lang` command.
+  - Explanation of Telegram's architecture (Telegram does not expose user IP addresses; client language tags are used instead).
 
-The bot captures the metadata and voice messages from the user and logs them into SQLite database tables.
+---
 
-### Voice Message Handling
+## Quick Start
 
-The bot listens for incoming voice messages, validates their length, and saves the voice messages as `.ogg` files.
+### 1. Run with Docker Compose (Host-Visible Storage)
 
-### File Hashing
+```bash
+# Set your Telegram Bot Token
+export BOT_TOKEN="your_bot_token_from_botfather"
 
-For each received voice message, the bot calculates a hash value to identify unique messages. Bot will prevent sending the same message over and over again (by checking MD5) to avoid spam.
-
-### Commands
-
-- `/start`: Welcomes the user and logs their information.
-- `/last`: Sends the most recent voice message.
-- `/random`: Sends a random voice message from the database.
-
-### Exception Handling
-
-Error conditions such as hash calculation failures, and empty databases are handled gracefully with appropriate text messages.
-
-### Other Message Types
-
-The bot also responds to other types of messages, but essentially requests voice messages. It responds to stickers, audio, and video messages but does not process them.
-
-## Code Segments
-
-### SQLite Connection and Query
-
-Uses Microsoft's `SqliteCommand` for executing SQLite queries for logging and message retrieval.
-
-`string stm = "SELECT filehash FROM Voices ORDER BY filehash DESC LIMIT 100;";`
-
-`using var cmd = new SqliteCommand(stm, conn);`
-
-### File Hashing
-
-Calculates the hash of each file using a utility function.
-
-`string hashvalue = Utilities.calculate_checksum_of_thefile(destinationFilePath);`
-
-### Sending Messages
-
-Uses the `SendVoiceAsync` and `SendTextMessageAsync` methods from the Telegram.Bot library.
-
-`await botClient.SendTextMessageAsync(message.Chat, "Принял ваше голосовое!");`
-
-### Main Method
-
-Initializes the SQLite database and starts the Telegram bot with specified handlers.
-
-```other
-bot.StartReceiving(
-    HandleUpdateAsync,
-    HandleErrorAsync,
-    receiverOptions,
-    cancellationToken
-);
+# Start container (files will be stored in ./data on your host)
+docker compose up -d --build
 ```
+
+### 2. Run Locally with .NET CLI
+
+```bash
+export BOT_TOKEN="your_bot_token_from_botfather"
+
+dotnet restore
+dotnet build
+dotnet test
+dotnet run --project ProjectVoiceLink
+```
+
+---
+
+## Commands
+
+### User Commands
+- `/start`: Registers the user and sends a localized welcome greeting.
+- `/last`: Plays back the most recent voice message.
+- `/random`: Plays back a random voice message from another user.
+- `/lang [code]`: Switch language (e.g. `/lang en`, `/lang ru`, `/lang es`, `/lang de`, `/lang uk`, `/lang pt`, `/lang pl`).
+
+### Admin Commands (Requires `ADMIN_USER_IDS`)
+- `/stats`: Displays server disk usage, active voice count, registered users, and uptime.
+- `/purge [days]`: Purges voice files and database records older than the specified days.
+
+---
+
+## Technology Stack
+
+- **Framework**: .NET 10.0 LTS
+- **Language**: C# 12 / 13
+- **Telegram Client**: `Telegram.Bot` 19.0+
+- **Database**: `Microsoft.Data.Sqlite` 10.0+ (WAL mode, connection pooling)
+- **Test Framework**: `xUnit` 2.9+

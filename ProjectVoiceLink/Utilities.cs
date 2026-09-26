@@ -1,40 +1,75 @@
-﻿using SQLitePCL;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
+using System.IO;
 using System.Security.Cryptography;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using Telegram.Bot.Types;
 
 namespace ProjectVoiceLink
 {
     public static class Utilities
     {
-        public static string hashvalue { get; set; }
         public static string calculate_checksum_of_thefile(string filepath)
         {
-            var md5 = MD5.Create();
+            try
             {
-                try
+                if (!File.Exists(filepath))
                 {
-                    var readstream = System.IO.File.OpenRead(filepath);
-                    
-                    
-                        var hash = md5.ComputeHash(readstream);
-                        hashvalue = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
-                    
-                    readstream.Close();
+                    return "error";
                 }
-                catch
-                {
-                    hashvalue = "error";
-                    return hashvalue;
-                }
-            }
 
-            return hashvalue;
+                using var readstream = new FileStream(
+                    filepath, 
+                    FileMode.Open, 
+                    FileAccess.Read, 
+                    FileShare.Read, 
+                    bufferSize: 64 * 1024);
+
+                var hash = MD5.HashData(readstream);
+                return Convert.ToHexString(hash).ToLowerInvariant();
+            }
+            catch
+            {
+                return "error";
+            }
+        }
+
+        public static async Task<string> calculate_checksum_async(string filepath, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (!File.Exists(filepath))
+                {
+                    return "error";
+                }
+
+                await using var readstream = new FileStream(
+                    filepath, 
+                    FileMode.Open, 
+                    FileAccess.Read, 
+                    FileShare.Read, 
+                    bufferSize: 64 * 1024, 
+                    useAsync: true);
+
+                var hash = await MD5.HashDataAsync(readstream, cancellationToken);
+                return Convert.ToHexString(hash).ToLowerInvariant();
+            }
+            catch
+            {
+                return "error";
+            }
+        }
+
+        public static string FormatBytes(long bytes)
+        {
+            string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
+            int i = 0;
+            double dBytes = bytes;
+            while (dBytes >= 1024 && i < suffixes.Length - 1)
+            {
+                dBytes /= 1024;
+                i++;
+            }
+            return $"{dBytes:0.##} {suffixes[i]}";
         }
     }
-   
 }

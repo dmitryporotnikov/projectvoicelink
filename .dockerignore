@@ -1,0 +1,11 @@
+**/.git
+**/.gitignore
+**/.vs
+**/bin
+**/obj
+**/TestResults
+*.user
+*.suo
+ProjectVoiceLink.db
+audio_bottles/
+Documentation/

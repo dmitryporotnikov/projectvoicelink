@@ -1,0 +1,36 @@
+services:
+  projectvoicelink:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: projectvoicelink
+    restart: unless-stopped
+    environment:
+      # Required Telegram Bot API token
+      - BOT_TOKEN=${BOT_TOKEN:-YOURBOTTOKEN}
+      
+      # Storage paths inside container (mapped to ./data on host)
+      - DATABASE_PATH=/app/data/ProjectVoiceLink.db
+      - AUDIO_STORAGE_PATH=/app/data/audio_bottles
+      
+      # Duration boundaries (in seconds)
+      - MIN_VOICE_LENGTH_SECONDS=1
+      - MAX_VOICE_LENGTH_SECONDS=180
+      
+      # Anti-Spam & Rate-Limiting cooldowns (in seconds)
+      - VOICE_COOLDOWN_SECONDS=10
+      - COMMAND_COOLDOWN_SECONDS=2
+      
+      # Server Maintenance & Retention Policy
+      - RETENTION_DAYS=30
+      - MAINTENANCE_INTERVAL_HOURS=24
+      
+      # Comma-separated list of Telegram User IDs with admin access (/stats, /purge)
+      - ADMIN_USER_IDS=${ADMIN_USER_IDS:-}
+      
+      # Comma-separated list of banned Telegram User IDs
+      - BANNED_USER_IDS=${BANNED_USER_IDS:-}
+
+    # Direct host bind-mount: files are directly visible and editable on the VPS host filesystem
+    volumes:
+      - ./data:/app/data

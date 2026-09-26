@@ -1,0 +1,58 @@
+## .NET & Build Artifacts
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+publish/
+
+## Visual Studio / Roslyn / MSBuild
+.vs/
+*.user
+*.userprefs
+*.suo
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+
+## VS Code & JetBrains Rider
+.idea/
+*.sln.iml
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+## Test Results & Coverage
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+*.coveragexml
+coverage.*
+CoverletSourceRootsMapping_*
+.msCoverageSourceRootsMapping_*
+
+## SQLite Database Files & WAL Journals
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+## Application Runtime Data & Audio Storage
+data/
+audio_bottles/
+*.ogg
+
+## Secrets & Local Environment Configuration
+.env
+.env.*
+!.env.example
+appsettings*.local.json
+appsettings.Development.json
+
+## OS Generated Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/

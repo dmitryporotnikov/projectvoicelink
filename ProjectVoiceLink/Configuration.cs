@@ -1,17 +1,91 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ProjectVoiceLink
 {
-    internal static class Configuration
+    public static class Configuration
     {
-        public static int minimum_voice_message_length_in_seconds = 1; //Minimum voice message length in seconds
+        public static int minimum_voice_message_length_in_seconds => GetInt("MIN_VOICE_LENGTH_SECONDS", 1);
 
-        public static string DatabasePath = "Data Source=" + $"../ProjectVoiceLink.db"; //Database path
+        public static int MaximumVoiceDurationSeconds => GetInt("MAX_VOICE_LENGTH_SECONDS", 180);
 
-        public static string BotToken = "YOURBOTTOKEN"; //Bot token
+        public static int VoiceCooldownSeconds => GetInt("VOICE_COOLDOWN_SECONDS", 10);
+
+        public static int CommandCooldownSeconds => GetInt("COMMAND_COOLDOWN_SECONDS", 2);
+
+        public static int RetentionDays => GetInt("RETENTION_DAYS", 30);
+
+        public static int MaintenanceIntervalHours => GetInt("MAINTENANCE_INTERVAL_HOURS", 24);
+
+        public static string AudioStoragePath => GetAudioStoragePath();
+
+        public static string DatabasePath => GetDatabaseConnectionString();
+
+        public static string BotToken => GetBotToken();
+
+        public static HashSet<string> AdminUserIds => GetIdSet("ADMIN_USER_IDS");
+
+        public static HashSet<string> BannedUserIds => GetIdSet("BANNED_USER_IDS");
+
+        private static int GetInt(string envName, int defaultValue)
+        {
+            var envVal = Environment.GetEnvironmentVariable(envName);
+            if (!string.IsNullOrWhiteSpace(envVal) && int.TryParse(envVal, out int val) && val >= 0)
+            {
+                return val;
+            }
+            return defaultValue;
+        }
+
+        private static HashSet<string> GetIdSet(string envName)
+        {
+            var envVal = Environment.GetEnvironmentVariable(envName);
+            if (string.IsNullOrWhiteSpace(envVal))
+            {
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            return envVal
+                .Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static string GetAudioStoragePath()
+        {
+            var envVal = Environment.GetEnvironmentVariable("AUDIO_STORAGE_PATH");
+            if (!string.IsNullOrWhiteSpace(envVal))
+            {
+                return envVal;
+            }
+            return "audio_bottles";
+        }
+
+        private static string GetDatabaseConnectionString()
+        {
+            var envVal = Environment.GetEnvironmentVariable("DATABASE_PATH");
+            if (!string.IsNullOrWhiteSpace(envVal))
+            {
+                if (envVal.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+                {
+                    return envVal;
+                }
+                return $"Data Source={envVal}";
+            }
+            return "Data Source=ProjectVoiceLink.db";
+        }
+
+        private static string GetBotToken()
+        {
+            var envVal = Environment.GetEnvironmentVariable("BOT_TOKEN") 
+                      ?? Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
+            if (!string.IsNullOrWhiteSpace(envVal))
+            {
+                return envVal;
+            }
+            return "YOURBOTTOKEN";
+        }
     }
 }
