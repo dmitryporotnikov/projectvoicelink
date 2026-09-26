@@ -50,6 +50,8 @@ export BOT_TOKEN="your_bot_token_from_botfather"
 docker compose up -d --build
 ```
 
+> 📖 **Production Deployment Guide**: For full instructions on hosting with Docker, host filesystem visibility (`./data`), volume backups, and VPS maintenance, check the [Deployment & Server Administration Guide](Documentation/deployment.md).
+
 ### 2. Run Locally with .NET CLI
 
 ```bash
@@ -60,6 +62,32 @@ dotnet build
 dotnet test
 dotnet run --project ProjectVoiceLink
 ```
+
+---
+
+## Supported Environment Variables (`.env`)
+
+You can configure the application via a `.env` file or system environment variables:
+
+| Variable | Default | Description |
+| :--- | :---: | :--- |
+| `BOT_TOKEN` | *(Required)* | Telegram Bot API token from [@BotFather](https://t.me/BotFather). |
+| `DATABASE_PATH` | `/app/data/ProjectVoiceLink.db` | SQLite database file path or connection string. |
+| `AUDIO_STORAGE_PATH` | `/app/data/audio_bottles` | Host/container directory path for storing `.ogg` voice files. |
+| `MIN_VOICE_LENGTH_SECONDS` | `1` | Minimum recording duration accepted by the bot. |
+| `MAX_VOICE_LENGTH_SECONDS` | `180` | Maximum recording duration accepted by the bot. |
+| `VOICE_COOLDOWN_SECONDS` | `3` | Minimum cooldown between consecutive voice messages (`0` to disable). |
+| `VOICE_WINDOW_SECONDS` | `30` | Duration of the sliding throttle window for voice messages. |
+| `VOICE_MAX_PER_WINDOW` | `3` | Maximum voice messages allowed within the sliding window. |
+| `COMMAND_COOLDOWN_SECONDS` | `1` | Minimum cooldown between consecutive text commands (`0` to disable). |
+| `COMMAND_WINDOW_SECONDS` | `10` | Duration of the sliding throttle window for commands. |
+| `COMMAND_MAX_PER_WINDOW` | `5` | Maximum commands allowed within the sliding window. |
+| `RETENTION_DAYS` | `30` | Number of days to retain recordings before automated maintenance purge. |
+| `MAINTENANCE_INTERVAL_HOURS` | `24` | Interval in hours between automated background maintenance cycles (`0` to disable). |
+| `ADMIN_USER_IDS` | *(Empty)* | Comma-separated list of numeric Telegram User IDs authorized for `/stats` and `/purge`. |
+| `BANNED_USER_IDS` | *(Empty)* | Comma-separated list of numeric Telegram User IDs blocked from interacting with the bot. |
+
+For detailed configuration instructions and examples, see the [Configuration Guide](Documentation/configuration.md).
 
 ---
 

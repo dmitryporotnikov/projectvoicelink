@@ -11,9 +11,17 @@ namespace ProjectVoiceLink
 
         public static int MaximumVoiceDurationSeconds => GetInt("MAX_VOICE_LENGTH_SECONDS", 180);
 
-        public static int VoiceCooldownSeconds => GetInt("VOICE_COOLDOWN_SECONDS", 10);
+        public static int VoiceCooldownSeconds => GetInt("VOICE_COOLDOWN_SECONDS", 3);
 
-        public static int CommandCooldownSeconds => GetInt("COMMAND_COOLDOWN_SECONDS", 2);
+        public static int VoiceWindowSeconds => GetInt("VOICE_WINDOW_SECONDS", 30);
+
+        public static int VoiceMaxPerWindow => GetInt("VOICE_MAX_PER_WINDOW", 3);
+
+        public static int CommandCooldownSeconds => GetInt("COMMAND_COOLDOWN_SECONDS", 1);
+
+        public static int CommandWindowSeconds => GetInt("COMMAND_WINDOW_SECONDS", 10);
+
+        public static int CommandMaxPerWindow => GetInt("COMMAND_MAX_PER_WINDOW", 5);
 
         public static int RetentionDays => GetInt("RETENTION_DAYS", 30);
 

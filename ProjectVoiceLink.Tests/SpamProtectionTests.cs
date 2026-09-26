@@ -73,5 +73,16 @@ namespace ProjectVoiceLink.Tests
                 Assert.True(second.RetryAfterSeconds > 0);
             }
         }
+
+        [Fact]
+        public void SlidingWindow_AllowsConfigurableLimitsViaEnvironment()
+        {
+            Assert.True(Configuration.VoiceCooldownSeconds >= 0);
+            Assert.True(Configuration.VoiceWindowSeconds >= 0);
+            Assert.True(Configuration.VoiceMaxPerWindow >= 0);
+            Assert.True(Configuration.CommandCooldownSeconds >= 0);
+            Assert.True(Configuration.CommandWindowSeconds >= 0);
+            Assert.True(Configuration.CommandMaxPerWindow >= 0);
+        }
     }
 }

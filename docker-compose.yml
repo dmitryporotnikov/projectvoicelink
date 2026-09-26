@@ -17,9 +17,13 @@ services:
       - MIN_VOICE_LENGTH_SECONDS=1
       - MAX_VOICE_LENGTH_SECONDS=180
       
-      # Anti-Spam & Rate-Limiting cooldowns (in seconds)
-      - VOICE_COOLDOWN_SECONDS=10
-      - COMMAND_COOLDOWN_SECONDS=2
+      # Anti-Spam & Rate-Limiting sliding window cooldowns (in seconds)
+      - VOICE_COOLDOWN_SECONDS=3
+      - VOICE_WINDOW_SECONDS=30
+      - VOICE_MAX_PER_WINDOW=3
+      - COMMAND_COOLDOWN_SECONDS=1
+      - COMMAND_WINDOW_SECONDS=10
+      - COMMAND_MAX_PER_WINDOW=5
       
       # Server Maintenance & Retention Policy
       - RETENTION_DAYS=30

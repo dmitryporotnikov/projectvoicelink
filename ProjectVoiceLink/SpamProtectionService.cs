@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,8 +11,8 @@ namespace ProjectVoiceLink
     public class SpamProtectionService
     {
         private readonly DatabaseService _databaseService;
-        private readonly ConcurrentDictionary<string, DateTime> _lastVoiceTime = new();
-        private readonly ConcurrentDictionary<string, DateTime> _lastCommandTime = new();
+        private readonly ConcurrentDictionary<string, List<DateTime>> _voiceHistory = new();
+        private readonly ConcurrentDictionary<string, List<DateTime>> _commandHistory = new();
 
         public SpamProtectionService(DatabaseService databaseService)
         {
@@ -26,46 +27,74 @@ namespace ProjectVoiceLink
 
         public RateLimitResult CheckVoiceRateLimit(string userId)
         {
-            if (string.IsNullOrWhiteSpace(userId)) return new RateLimitResult(true, 0);
-
-            var cooldown = Configuration.VoiceCooldownSeconds;
-            if (cooldown <= 0) return new RateLimitResult(true, 0);
-
-            var now = DateTime.UtcNow;
-            if (_lastVoiceTime.TryGetValue(userId, out var lastTime))
-            {
-                var elapsed = (now - lastTime).TotalSeconds;
-                if (elapsed < cooldown)
-                {
-                    var retryAfter = (int)Math.Ceiling(cooldown - elapsed);
-                    return new RateLimitResult(false, retryAfter);
-                }
-            }
-
-            _lastVoiceTime[userId] = now;
-            return new RateLimitResult(true, 0);
+            return CheckRateLimit(
+                userId, 
+                _voiceHistory, 
+                Configuration.VoiceCooldownSeconds, 
+                Configuration.VoiceWindowSeconds, 
+                Configuration.VoiceMaxPerWindow);
         }
 
         public RateLimitResult CheckCommandRateLimit(string userId)
         {
+            return CheckRateLimit(
+                userId, 
+                _commandHistory, 
+                Configuration.CommandCooldownSeconds, 
+                Configuration.CommandWindowSeconds, 
+                Configuration.CommandMaxPerWindow);
+        }
+
+        private static RateLimitResult CheckRateLimit(
+            string userId,
+            ConcurrentDictionary<string, List<DateTime>> history,
+            int cooldownSec,
+            int windowSec,
+            int maxPerWindow)
+        {
             if (string.IsNullOrWhiteSpace(userId)) return new RateLimitResult(true, 0);
 
-            var cooldown = Configuration.CommandCooldownSeconds;
-            if (cooldown <= 0) return new RateLimitResult(true, 0);
-
-            var now = DateTime.UtcNow;
-            if (_lastCommandTime.TryGetValue(userId, out var lastTime))
+            // If rate limiting is completely disabled
+            if (cooldownSec <= 0 && (windowSec <= 0 || maxPerWindow <= 0))
             {
-                var elapsed = (now - lastTime).TotalSeconds;
-                if (elapsed < cooldown)
-                {
-                    var retryAfter = (int)Math.Ceiling(cooldown - elapsed);
-                    return new RateLimitResult(false, retryAfter);
-                }
+                return new RateLimitResult(true, 0);
             }
 
-            _lastCommandTime[userId] = now;
-            return new RateLimitResult(true, 0);
+            var now = DateTime.UtcNow;
+            var list = history.GetOrAdd(userId, _ => new List<DateTime>());
+
+            lock (list)
+            {
+                // 1. Minimum spacing cooldown between consecutive messages
+                if (cooldownSec > 0 && list.Count > 0)
+                {
+                    var lastTime = list[^1];
+                    var elapsed = (now - lastTime).TotalSeconds;
+                    if (elapsed < cooldownSec)
+                    {
+                        var retryAfter = (int)Math.Ceiling(cooldownSec - elapsed);
+                        return new RateLimitResult(false, Math.Max(1, retryAfter));
+                    }
+                }
+
+                // 2. Sliding window limit (maximum N submissions within window W seconds)
+                if (windowSec > 0 && maxPerWindow > 0)
+                {
+                    var windowCutoff = now.AddSeconds(-windowSec);
+                    list.RemoveAll(t => t < windowCutoff);
+
+                    if (list.Count >= maxPerWindow)
+                    {
+                        var oldestInWindow = list[0];
+                        var timeUntilExpiry = (oldestInWindow.AddSeconds(windowSec) - now).TotalSeconds;
+                        var retryAfter = (int)Math.Ceiling(timeUntilExpiry);
+                        return new RateLimitResult(false, Math.Max(1, retryAfter));
+                    }
+                }
+
+                list.Add(now);
+                return new RateLimitResult(true, 0);
+            }
         }
 
         public bool ValidateVoiceDuration(int durationSeconds, out string? errorReason, out int boundaryValue)

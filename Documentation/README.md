@@ -61,3 +61,5 @@ export BOT_TOKEN="your-telegram-bot-token"
 docker compose up -d --build
 ```
 All database and audio files will appear directly in `./data/` on your host machine.
+
+For in-depth deployment details, host filesystem administration, and volume maintenance, consult the [Deployment & Server Administration Guide](deployment.md).

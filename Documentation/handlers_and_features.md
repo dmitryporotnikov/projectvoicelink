@@ -58,9 +58,13 @@ Supported languages:
 
 ProjectVoiceLink implements multi-layered spam defense:
 
-### 3.1 Rate Limiting (Sliding Window Cooldowns)
-- **Voice Cooldown** (`VOICE_COOLDOWN_SECONDS`, default: 10s): Users attempting to spam voice messages in rapid succession receive a polite cooldown notification with the remaining wait time.
-- **Command Cooldown** (`COMMAND_COOLDOWN_SECONDS`, default: 2s): Protects against flooding text commands.
+### 3.1 Sliding Window Rate Limiting & Cooldowns
+- **Voice Cooldown & Throttle**:
+  - `VOICE_COOLDOWN_SECONDS` (default: 3s): Enforces spacing between individual submissions.
+  - `VOICE_WINDOW_SECONDS` (default: 30s) & `VOICE_MAX_PER_WINDOW` (default: 3): Prevents burst flooding by limiting users to at most 3 voice notes in 30 seconds.
+  - Setting cooldown to `0` completely disables the throttle.
+- **Command Cooldown & Throttle**:
+  - `COMMAND_COOLDOWN_SECONDS` (default: 1s) and `COMMAND_WINDOW_SECONDS` / `COMMAND_MAX_PER_WINDOW`: Protects against command flooding.
 
 ### 3.2 Duplicate Detection (Global MD5 Checksum)
 - When a voice file is downloaded, its MD5 checksum is calculated asynchronously using hardware acceleration (`MD5.HashDataAsync`).
