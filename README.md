@@ -1,114 +1,68 @@
-# ProjectVoiceLink - Telegram Voice Message Exchange
+# ProjectVoiceLink
 
-[![.NET 10.0](https://img.shields.io/badge/.NET-10.0%20LTS-purple.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](Dockerfile)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0%20LTS-512BD4?logo=dotnet)](https://dotnet.microsoft.com/download/dotnet/10.0)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](Dockerfile)
 
-An asynchronous, high-concurrency Telegram Bot built with C# and **.NET 10 LTS** designed to exchange voice messages randomly between users ("Message in a Bottle" concept).
+A Telegram bot that swaps voice messages between strangers. You send it a voice note, it sends you back someone else's. Message in a bottle, with `.ogg` files.
 
----
+Built with C# on .NET 10, using `Telegram.Bot` and SQLite in WAL mode. Audio and the database live on the host filesystem under `./data`, so you can look at what's stored without a special tool.
 
-## Quick Navigation
+## How it behaves
 
-- [Documentation Index](Documentation/README.md)
-- [Architecture & Database Design](Documentation/architecture.md)
-- [Configuration & Environment Variables](Documentation/configuration.md)
-- [Handlers, Localization & Features](Documentation/handlers_and_features.md)
-- [Deployment & Server Administration](Documentation/deployment.md)
-- [Development & Testing Guide](Documentation/development.md)
-- [AI Coding Agent Guidelines](AGENTS.md)
+Voice notes get rate limited with a sliding window, both for submissions and for commands. Duplicates are caught by MD5 hash and deleted, recording length is bounded at both ends, and a banlist takes care of repeat offenders. A background cleaner runs on a timer, deleting expired files and database rows, clearing orphans and compacting SQLite. `/purge` and `/stats` do the same on demand for admins.
 
----
+The interface speaks Russian, English, Spanish, German, Ukrainian, Portuguese and Polish. Language is picked from the Telegram client's language code on first contact, and `/lang` changes it later.
 
-## Key Features
+## Run it
 
-- **Anonymous Voice Exchange**: Users drop a voice note into the bot and receive a random voice note from another user in return.
-- **High Concurrency & Performance**: SQLite Write-Ahead Logging (WAL mode), connection pooling, hardware-accelerated MD5 hashing (`MD5.HashDataAsync`), and $O(1)$ indexed lookups.
-- **Server File System Visibility**: Audio files and SQLite database are directly stored on the host file system (`./data/`) with human-readable timestamps and user IDs.
-- **Automated Disk Maintenance**: Scheduled background cleaner (`PeriodicTimer`) and admin commands (`/purge`, `/stats`) that automatically delete expired voice files, purge database records, clean orphan files, and compact SQLite.
-- **Multi-Layered Spam & Abuse Protection**:
-  - Sliding-window rate limiting on voice submissions (`VOICE_COOLDOWN_SECONDS`) and commands (`COMMAND_COOLDOWN_SECONDS`).
-  - Global duplicate detection by MD5 hash (duplicate files are immediately deleted).
-  - Configurable recording duration boundaries (`MIN_VOICE_LENGTH_SECONDS` and `MAX_VOICE_LENGTH_SECONDS`).
-  - User banlist support (`BANNED_USER_IDS`).
-- **Multi-Language Localization**:
-  - Automatic detection via Telegram client `LanguageCode` (`ru`, `en`, `es`, `de`, `uk`, `pt`, `pl`).
-  - Explicit language switching via `/lang` command.
-  - Explanation of Telegram's architecture (Telegram does not expose user IP addresses; client language tags are used instead).
-
----
-
-## Quick Start
-
-### 1. Run with Docker Compose (Host-Visible Storage)
+With Docker Compose:
 
 ```bash
-# Set your Telegram Bot Token
 export BOT_TOKEN="your_bot_token_from_botfather"
-
-# Start container (files will be stored in ./data on your host)
 docker compose up -d --build
 ```
 
-> 📖 **Production Deployment Guide**: For full instructions on hosting with Docker, host filesystem visibility (`./data`), volume backups, and VPS maintenance, check the [Deployment & Server Administration Guide](Documentation/deployment.md).
-
-### 2. Run Locally with .NET CLI
+Or with the .NET SDK:
 
 ```bash
 export BOT_TOKEN="your_bot_token_from_botfather"
-
 dotnet restore
 dotnet build
 dotnet test
 dotnet run --project ProjectVoiceLink
 ```
 
----
+## Configuration
 
-## Supported Environment Variables (`.env`)
+The important ones, all optional except `BOT_TOKEN`:
 
-You can configure the application via a `.env` file or system environment variables:
+| Variable | Default | What it does |
+|---|---|---|
+| `BOT_TOKEN` | required | Telegram token from [@BotFather](https://t.me/BotFather). |
+| `DATABASE_PATH` | `/app/data/ProjectVoiceLink.db` | SQLite file. |
+| `AUDIO_STORAGE_PATH` | `/app/data/audio_bottles` | Where voice files go. |
+| `MIN_VOICE_LENGTH_SECONDS` | `1` | Shortest accepted recording. |
+| `MAX_VOICE_LENGTH_SECONDS` | `180` | Longest accepted recording. |
+| `VOICE_COOLDOWN_SECONDS` | `3` | Pause between voice submissions. |
+| `RETENTION_DAYS` | `30` | Age at which recordings are purged. |
+| `MAINTENANCE_INTERVAL_HOURS` | `24` | Cleaner interval, `0` disables it. |
+| `ADMIN_USER_IDS` | empty | Telegram IDs allowed to run `/stats` and `/purge`. |
+| `BANNED_USER_IDS` | empty | Telegram IDs blocked from the bot. |
 
-| Variable | Default | Description |
-| :--- | :---: | :--- |
-| `BOT_TOKEN` | *(Required)* | Telegram Bot API token from [@BotFather](https://t.me/BotFather). |
-| `DATABASE_PATH` | `/app/data/ProjectVoiceLink.db` | SQLite database file path or connection string. |
-| `AUDIO_STORAGE_PATH` | `/app/data/audio_bottles` | Host/container directory path for storing `.ogg` voice files. |
-| `MIN_VOICE_LENGTH_SECONDS` | `1` | Minimum recording duration accepted by the bot. |
-| `MAX_VOICE_LENGTH_SECONDS` | `180` | Maximum recording duration accepted by the bot. |
-| `VOICE_COOLDOWN_SECONDS` | `3` | Minimum cooldown between consecutive voice messages (`0` to disable). |
-| `VOICE_WINDOW_SECONDS` | `30` | Duration of the sliding throttle window for voice messages. |
-| `VOICE_MAX_PER_WINDOW` | `3` | Maximum voice messages allowed within the sliding window. |
-| `COMMAND_COOLDOWN_SECONDS` | `1` | Minimum cooldown between consecutive text commands (`0` to disable). |
-| `COMMAND_WINDOW_SECONDS` | `10` | Duration of the sliding throttle window for commands. |
-| `COMMAND_MAX_PER_WINDOW` | `5` | Maximum commands allowed within the sliding window. |
-| `RETENTION_DAYS` | `30` | Number of days to retain recordings before automated maintenance purge. |
-| `MAINTENANCE_INTERVAL_HOURS` | `24` | Interval in hours between automated background maintenance cycles (`0` to disable). |
-| `ADMIN_USER_IDS` | *(Empty)* | Comma-separated list of numeric Telegram User IDs authorized for `/stats` and `/purge`. |
-| `BANNED_USER_IDS` | *(Empty)* | Comma-separated list of numeric Telegram User IDs blocked from interacting with the bot. |
-
-For detailed configuration instructions and examples, see the [Configuration Guide](Documentation/configuration.md).
-
----
+The full list, including the window and per-window limits, is in [Documentation/configuration.md](Documentation/configuration.md).
 
 ## Commands
 
-### User Commands
-- `/start`: Registers the user and sends a localized welcome greeting.
-- `/last`: Plays back the most recent voice message.
-- `/random`: Plays back a random voice message from another user.
-- `/lang [code]`: Switch language (e.g. `/lang en`, `/lang ru`, `/lang es`, `/lang de`, `/lang uk`, `/lang pt`, `/lang pl`).
+Users get `/start`, `/last`, `/random` and `/lang [code]`. Admins get `/stats`, which reports disk use, voice count, registered users and uptime, and `/purge [days]`, which drops files and rows older than the given number of days.
 
-### Admin Commands (Requires `ADMIN_USER_IDS`)
-- `/stats`: Displays server disk usage, active voice count, registered users, and uptime.
-- `/purge [days]`: Purges voice files and database records older than the specified days.
+## Documentation
 
----
+- [Architecture and database design](Documentation/architecture.md)
+- [Configuration](Documentation/configuration.md)
+- [Handlers, localization and features](Documentation/handlers_and_features.md)
+- [Deployment and server administration](Documentation/deployment.md)
+- [Development and testing](Documentation/development.md)
 
-## Technology Stack
+The stack is .NET 10, `Telegram.Bot` 19.0, `Microsoft.Data.Sqlite` 10.0 and xUnit 2.9.
 
-- **Framework**: .NET 10.0 LTS
-- **Language**: C# 12 / 13
-- **Telegram Client**: `Telegram.Bot` 19.0+
-- **Database**: `Microsoft.Data.Sqlite` 10.0+ (WAL mode, connection pooling)
-- **Test Framework**: `xUnit` 2.9+
+There's no license file in this repo yet, so treat the code as all rights reserved.
